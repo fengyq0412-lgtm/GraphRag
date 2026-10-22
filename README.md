@@ -15,6 +15,8 @@ python -m graphrag_lite.cli serve --port 8000
 
 页面中的**知识图谱**可搜索实体或关系，点击节点查看关联断言，点击连线查看原文证据并跳转来源文档；支持拖动节点与滚轮缩放。**已入库文档**提供标题/正文搜索、分页、完整正文、分块以及该文档抽取的关系。回答里的证据也能直接打开对应文档。
 
+样例包含 12 份文档：组织、系统组件、知识处理、检索、发布依赖、质量闭环和评测等关系。其中“待审核变更示例”故意与现有负责人断言冲突，运行 `seed` 后可在**冲突审核**体验处理流程。待审核版本不会进入检索或图谱。
+
 CLI 查询与评测：
 
 ```bash
@@ -42,6 +44,16 @@ export LLM_BASE_URL='https://api.openai.com/v1' # 可省略
 
 `POST /api/ingest` 接受 `{"title":"...","text":"...","facts":[...]}`；省略 facts 时自动抽取。`POST /api/ask` 接受 `{"question":"...","mode":"auto","max_hops":3}`。`GET /api/graph?q=...` 返回可视化实体、断言及证据（最多 150 条断言）；`GET /api/documents?q=...&limit=25&offset=0` 返回文档列表，`GET /api/documents/{id}` 返回全文、分块和断言。`GET /api/resolutions` 查看疑似重复实体，`POST /api/resolve` 传 `{"id":"...","action":"merge|distinct"}`。`GET /api/stats` 返回统计。
 
+### 新增、版本更新与冲突
+
+- **新增**：页面“新增文档”或 `POST /api/ingest` 创建 v1。相同标题和正文重复提交会返回已有记录，不重复写入。
+- **更新**：在文档详情打开当前版本，点击“以此版本编辑”；提交新正文、完整的新断言列表和变更说明。接口为 `POST /api/series/{series_id}/versions`，请求体包含 `base_version`、`title`、`text`、`facts`、`note`。版本历史保留每一版的正文和断言，可查看快照及与上一版的文本/关系差异。新版本替代同系列的旧版本；检索只使用当前生效版本。
+- **并发编辑冲突**：提交时以 `base_version` 做乐观锁校验。若当前版本已变化，返回 HTTP 409 和 `current_version`；编辑者需重新打开最新版，手工合并后再提交。不会悄悄覆盖较新的内容。
+- **断言冲突**：新旧生效文档出现相同主体、相同谓词、不同客体时，新版本转为 `pending`，暂不参与图谱或回答。`GET /api/conflicts` 查看冲突及双方证据，`POST /api/conflicts/resolve` 提交 `series_id`、`version`、`action`。`replace` 采用新版并令冲突的旧断言退出检索；`coexist` 并列保留双方且标记为争议，问答显示冲突提醒；`reject` 驳回新版，当前版本继续生效。历史快照均保留。
+- **边界**：当前冲突候选规则是“同一实体 + 谓词，不同客体”，会把合法的一对多关系也送审。审核人可选“并列保留”。系统不自动判断哪条事实真实，也不自动合并过期编辑。
+
+可用 `GET /api/series/{series_id}/versions` 查看版本列表，`GET /api/series/{series_id}/diff?from=1&to=2` 查看版本差异。
+
 1. **抽取与入库**：文本分块；每条断言验证精确摘录、置信度和实体类型；文档、块、实体、别名、断言分别持久化。
 2. **消歧**：同类型精确别名自动匹配；模糊相似项进入人工队列，避免误合并。页面可合并或保留。
 3. **路由**：依据问题中出现的实体与多跳词选择文本、图谱或融合路径；页面显示理由，可手动改写。
@@ -50,7 +62,7 @@ export LLM_BASE_URL='https://api.openai.com/v1' # 可省略
 
 ## 评测
 
-`evals/questions.json` 包含单跳、多跳、三跳、纯文本、不可回答样例。`eval` 输出：
+`evals/questions.json` 包含单跳、多跳、三跳、系统架构、发布依赖、纯文本和不可回答等 8 个样例。`eval` 输出：
 
 - 路由准确率：选中的路径与标注一致。
 - `source_recall_at_6`：期望文档进入前六证据的比例。

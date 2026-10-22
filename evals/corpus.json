@@ -27,5 +27,84 @@
     "title": "发布流程说明",
     "text": "发布流水线在代码合并后自动运行。流水线首先构建镜像，然后执行安全扫描。",
     "facts": []
+  },
+  {
+    "title": "星图系统架构",
+    "text": "星图项目使用 GraphRAG 引擎。GraphRAG 引擎包含实体抽取器。GraphRAG 引擎包含断言校验器。GraphRAG 引擎连接知识图谱。",
+    "facts": [
+      {"subject":"星图项目","subject_type":"project","predicate":"使用","object":"GraphRAG 引擎","object_type":"system","quote":"星图项目使用 GraphRAG 引擎。"},
+      {"subject":"GraphRAG 引擎","subject_type":"system","predicate":"包含","object":"实体抽取器","object_type":"component","quote":"GraphRAG 引擎包含实体抽取器。"},
+      {"subject":"GraphRAG 引擎","subject_type":"system","predicate":"包含","object":"断言校验器","object_type":"component","quote":"GraphRAG 引擎包含断言校验器。"},
+      {"subject":"GraphRAG 引擎","subject_type":"system","predicate":"连接","object":"知识图谱","object_type":"database","quote":"GraphRAG 引擎连接知识图谱。"}
+    ]
+  },
+  {
+    "title": "知识处理链路",
+    "text": "原始文档经过分块器处理。分块器生成文本块。实体抽取器从文本块识别实体。断言校验器检查证据摘录。证据摘录来自原始文档。",
+    "facts": [
+      {"subject":"原始文档","object":"分块器","predicate":"经过","subject_type":"document","object_type":"component","quote":"原始文档经过分块器处理。"},
+      {"subject":"分块器","object":"文本块","predicate":"生成","subject_type":"component","object_type":"data","quote":"分块器生成文本块。"},
+      {"subject":"实体抽取器","object":"实体","predicate":"识别","subject_type":"component","object_type":"data","quote":"实体抽取器从文本块识别实体。"},
+      {"subject":"断言校验器","object":"证据摘录","predicate":"检查","subject_type":"component","object_type":"data","quote":"断言校验器检查证据摘录。"},
+      {"subject":"证据摘录","object":"原始文档","predicate":"来自","subject_type":"data","object_type":"document","quote":"证据摘录来自原始文档。"}
+    ]
+  },
+  {
+    "title": "检索与回答链路",
+    "text": "查询路由器选择文本检索。查询路由器选择图谱遍历。RRF 融合器合并检索结果。重排器对候选证据排序。回答生成器引用证据块。",
+    "facts": [
+      {"subject":"查询路由器","predicate":"选择","object":"文本检索","subject_type":"component","object_type":"method","quote":"查询路由器选择文本检索。"},
+      {"subject":"查询路由器","predicate":"选择","object":"图谱遍历","subject_type":"component","object_type":"method","quote":"查询路由器选择图谱遍历。"},
+      {"subject":"RRF 融合器","predicate":"合并","object":"检索结果","subject_type":"component","object_type":"data","quote":"RRF 融合器合并检索结果。"},
+      {"subject":"重排器","predicate":"排序","object":"候选证据","subject_type":"component","object_type":"data","quote":"重排器对候选证据排序。"},
+      {"subject":"回答生成器","predicate":"引用","object":"证据块","subject_type":"component","object_type":"data","quote":"回答生成器引用证据块。"}
+    ]
+  },
+  {
+    "title": "组织与协作",
+    "text": "王芳属于平台团队。王芳负责发布流水线。张宁属于安全团队。安全团队负责安全扫描。",
+    "facts": [
+      {"subject":"王芳","predicate":"所属团队","object":"平台团队","subject_type":"person","object_type":"team","quote":"王芳属于平台团队。"},
+      {"subject":"王芳","predicate":"负责","object":"发布流水线","subject_type":"person","object_type":"system","quote":"王芳负责发布流水线。"},
+      {"subject":"张宁","predicate":"所属团队","object":"安全团队","subject_type":"person","object_type":"team","quote":"张宁属于安全团队。"},
+      {"subject":"安全团队","predicate":"职责","object":"安全扫描","subject_type":"team","object_type":"activity","quote":"安全团队负责安全扫描。"}
+    ]
+  },
+  {
+    "title": "发布依赖",
+    "text": "发布流水线依赖镜像仓库。镜像仓库运行于云平台。云平台由基础设施团队维护。安全扫描产出风险报告。",
+    "facts": [
+      {"subject":"发布流水线","predicate":"依赖","object":"镜像仓库","subject_type":"system","object_type":"system","quote":"发布流水线依赖镜像仓库。"},
+      {"subject":"镜像仓库","predicate":"运行于","object":"云平台","subject_type":"system","object_type":"platform","quote":"镜像仓库运行于云平台。"},
+      {"subject":"云平台","predicate":"维护团队","object":"基础设施团队","subject_type":"platform","object_type":"team","quote":"云平台由基础设施团队维护。"},
+      {"subject":"安全扫描","predicate":"产出","object":"风险报告","subject_type":"activity","object_type":"document","quote":"安全扫描产出风险报告。"}
+    ]
+  },
+  {
+    "title": "质量闭环",
+    "text": "风险报告由安全团队审核。安全团队向平台团队反馈修复建议。平台团队将修复建议写入发布计划。发布计划关联星图项目。",
+    "facts": [
+      {"subject":"风险报告","predicate":"审核团队","object":"安全团队","subject_type":"document","object_type":"team","quote":"风险报告由安全团队审核。"},
+      {"subject":"安全团队","predicate":"反馈给","object":"平台团队","subject_type":"team","object_type":"team","quote":"安全团队向平台团队反馈修复建议。"},
+      {"subject":"平台团队","predicate":"写入","object":"发布计划","subject_type":"team","object_type":"document","quote":"平台团队将修复建议写入发布计划。"},
+      {"subject":"发布计划","predicate":"关联","object":"星图项目","subject_type":"document","object_type":"project","quote":"发布计划关联星图项目。"}
+    ]
+  },
+  {
+    "title": "评测体系",
+    "text": "GraphRAG 代理使用评测集。评测集覆盖多跳问题。评测集覆盖引用正确性。人工评审检查答案忠实度。",
+    "facts": [
+      {"subject":"GraphRAG 代理","predicate":"使用","object":"评测集","subject_type":"system","object_type":"dataset","quote":"GraphRAG 代理使用评测集。"},
+      {"subject":"评测集","predicate":"覆盖","object":"多跳问题","subject_type":"dataset","object_type":"metric","quote":"评测集覆盖多跳问题。"},
+      {"subject":"评测集","predicate":"覆盖","object":"引用正确性","subject_type":"dataset","object_type":"metric","quote":"评测集覆盖引用正确性。"},
+      {"subject":"人工评审","predicate":"检查","object":"答案忠实度","subject_type":"method","object_type":"metric","quote":"人工评审检查答案忠实度。"}
+    ]
+  },
+  {
+    "title": "待审核变更示例",
+    "text": "星图项目的测试负责人是王芳。",
+    "facts": [
+      {"subject":"星图项目","subject_type":"project","predicate":"测试负责人","object":"王芳","object_type":"person","quote":"星图项目的测试负责人是王芳。"}
+    ]
   }
 ]

@@ -5,7 +5,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .pipeline import answer, extract
-from .store import Store
+from .store import Store, VersionConflict
 
 
 STATIC = Path(__file__).parent / "static"
@@ -47,6 +47,15 @@ def make_handler(database):
                         self.respond(200, store.list_documents(params.get("q", [""])[0],
                                                                 params.get("limit", [25])[0],
                                                                 params.get("offset", [0])[0]))
+                    elif path == "/api/conflicts":
+                        self.respond(200, store.pending_versions())
+                    elif path.startswith("/api/series/") and path.endswith("/versions"):
+                        series_id = path[len("/api/series/"):-len("/versions")].strip("/")
+                        self.respond(200, store.versions(series_id))
+                    elif path.startswith("/api/series/") and path.endswith("/diff"):
+                        series_id = path[len("/api/series/"):-len("/diff")].strip("/")
+                        self.respond(200, store.version_diff(series_id, params.get("from", [1])[0],
+                                                              params.get("to", [2])[0]))
                     elif path.startswith("/api/documents/"):
                         document = store.document(path.removeprefix("/api/documents/"))
                         self.respond(200, document) if document else self.respond(404, {"error": "Document not found"})
@@ -77,10 +86,23 @@ def make_handler(database):
                     elif path == "/api/resolve":
                         store.resolve(data["id"], data["action"])
                         self.respond(200, {"ok": True})
+                    elif path.startswith("/api/series/") and path.endswith("/versions"):
+                        series_id = path[len("/api/series/"):-len("/versions")].strip("/")
+                        facts = data.get("facts")
+                        if facts is None:
+                            facts = extract(data["text"])
+                        self.respond(200, store.update_document(series_id, data["base_version"],
+                                                                 data["title"], data["text"], facts,
+                                                                 data.get("note", "")))
+                    elif path == "/api/conflicts/resolve":
+                        self.respond(200, store.resolve_version(data["series_id"], int(data["version"]),
+                                                                 data["action"]))
                     else:
                         self.respond(404, {"error": "Not found"})
                 finally:
                     store.close()
+            except VersionConflict as exc:
+                self.respond(409, {"error": str(exc), "current_version": exc.current_version})
             except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
                 self.respond(400, {"error": str(exc)})
             except Exception as exc:
