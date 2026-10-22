@@ -43,6 +43,24 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result["answer_method"], "abstain")
         self.assertEqual(result["citations"], [])
 
+    def test_graph_and_document_browsing(self):
+        corpus = json.loads((Path(__file__).parent.parent / "evals" / "corpus.json").read_text())
+        ids = [self.store.ingest(item["title"], item["text"], item["facts"])["document_id"] for item in corpus]
+        listing = self.store.list_documents("团队", limit=2)
+        self.assertEqual(listing["total"], 3)
+        self.assertEqual(len(listing["items"]), 2)
+        document = self.store.document(ids[0])
+        self.assertEqual(document["title"], "星图项目职责")
+        self.assertEqual(len(document["chunks"]), 1)
+        self.assertEqual(len(document["assertions"]), 2)
+        self.assertIsNone(self.store.document("missing"))
+        graph = self.store.graph("星图项目")
+        self.assertEqual(len(graph["edges"]), 2)
+        self.assertEqual(len(graph["nodes"]), 3)
+        self.assertTrue(all(edge["document_id"] == ids[0] for edge in graph["edges"]))
+        self.assertEqual(len(self.store.graph(limit=1)["edges"]), 1)
+        self.assertTrue(self.store.graph(limit=1)["truncated"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,6 +13,8 @@ python -m graphrag_lite.cli serve --port 8000
 
 打开 <http://127.0.0.1:8000>。可试问：`星图项目的测试负责人属于哪个团队？请给出关系路径。`
 
+页面中的**知识图谱**可搜索实体或关系，点击节点查看关联断言，点击连线查看原文证据并跳转来源文档；支持拖动节点与滚轮缩放。**已入库文档**提供标题/正文搜索、分页、完整正文、分块以及该文档抽取的关系。回答里的证据也能直接打开对应文档。
+
 CLI 查询与评测：
 
 ```bash
@@ -38,7 +40,7 @@ export LLM_BASE_URL='https://api.openai.com/v1' # 可省略
 
 ## 流程与接口
 
-`POST /api/ingest` 接受 `{"title":"...","text":"...","facts":[...]}`；省略 facts 时自动抽取。`POST /api/ask` 接受 `{"question":"...","mode":"auto","max_hops":3}`。`GET /api/resolutions` 查看疑似重复实体，`POST /api/resolve` 传 `{"id":"...","action":"merge|distinct"}`。`GET /api/stats` 返回统计。
+`POST /api/ingest` 接受 `{"title":"...","text":"...","facts":[...]}`；省略 facts 时自动抽取。`POST /api/ask` 接受 `{"question":"...","mode":"auto","max_hops":3}`。`GET /api/graph?q=...` 返回可视化实体、断言及证据（最多 150 条断言）；`GET /api/documents?q=...&limit=25&offset=0` 返回文档列表，`GET /api/documents/{id}` 返回全文、分块和断言。`GET /api/resolutions` 查看疑似重复实体，`POST /api/resolve` 传 `{"id":"...","action":"merge|distinct"}`。`GET /api/stats` 返回统计。
 
 1. **抽取与入库**：文本分块；每条断言验证精确摘录、置信度和实体类型；文档、块、实体、别名、断言分别持久化。
 2. **消歧**：同类型精确别名自动匹配；模糊相似项进入人工队列，避免误合并。页面可合并或保留。

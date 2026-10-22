@@ -2,7 +2,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from .pipeline import answer, extract
 from .store import Store
@@ -22,7 +22,9 @@ def make_handler(database):
             self.wfile.write(payload)
 
         def do_GET(self):
-            path = urlparse(self.path).path
+            parsed = urlparse(self.path)
+            path = parsed.path
+            params = parse_qs(parsed.query)
             if path in ("/", "/index.html", "/style.css", "/app.js"):
                 file = STATIC / ("index.html" if path == "/" else path.lstrip("/"))
                 payload = file.read_bytes()
@@ -32,16 +34,28 @@ def make_handler(database):
                 self.end_headers()
                 self.wfile.write(payload)
                 return
-            store = Store(database)
             try:
-                if path == "/api/stats":
-                    self.respond(200, store.stats())
-                elif path == "/api/resolutions":
-                    self.respond(200, store.pending())
-                else:
-                    self.respond(404, {"error": "Not found"})
-            finally:
-                store.close()
+                store = Store(database)
+                try:
+                    if path == "/api/stats":
+                        self.respond(200, store.stats())
+                    elif path == "/api/resolutions":
+                        self.respond(200, store.pending())
+                    elif path == "/api/graph":
+                        self.respond(200, store.graph(params.get("q", [""])[0]))
+                    elif path == "/api/documents":
+                        self.respond(200, store.list_documents(params.get("q", [""])[0],
+                                                                params.get("limit", [25])[0],
+                                                                params.get("offset", [0])[0]))
+                    elif path.startswith("/api/documents/"):
+                        document = store.document(path.removeprefix("/api/documents/"))
+                        self.respond(200, document) if document else self.respond(404, {"error": "Document not found"})
+                    else:
+                        self.respond(404, {"error": "Not found"})
+                finally:
+                    store.close()
+            except (ValueError, TypeError) as exc:
+                self.respond(400, {"error": str(exc)})
 
         def do_POST(self):
             try:

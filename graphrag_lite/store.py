@@ -187,3 +187,61 @@ class Store:
     def stats(self):
         return {name: self.db.execute(f"SELECT count(*) FROM {name}").fetchone()[0]
                 for name in ("documents", "chunks", "entities", "assertions")}
+
+    def list_documents(self, query="", limit=25, offset=0):
+        limit = max(1, min(int(limit), 100))
+        offset = max(0, int(offset))
+        pattern = f"%{query.strip()}%"
+        total = self.db.execute("SELECT count(*) FROM documents WHERE title LIKE ? OR body LIKE ?",
+                                (pattern, pattern)).fetchone()[0]
+        rows = self.db.execute("""SELECT d.id,d.title,d.created_at,substr(d.body,1,180) AS preview,
+            count(DISTINCT c.id) AS chunk_count,count(DISTINCT a.id) AS assertion_count
+            FROM documents d LEFT JOIN chunks c ON c.document_id=d.id
+            LEFT JOIN assertions a ON a.chunk_id=c.id
+            WHERE d.title LIKE ? OR d.body LIKE ?
+            GROUP BY d.id ORDER BY d.created_at DESC,d.id LIMIT ? OFFSET ?""",
+            (pattern, pattern, limit, offset)).fetchall()
+        return {"total": total, "items": [dict(row) for row in rows], "limit": limit, "offset": offset}
+
+    def document(self, document_id):
+        row = self.db.execute("SELECT * FROM documents WHERE id=?", (document_id,)).fetchone()
+        if row is None:
+            return None
+        result = dict(row)
+        result["chunks"] = [dict(chunk) for chunk in self.db.execute(
+            "SELECT id,ordinal,body FROM chunks WHERE document_id=? ORDER BY ordinal", (document_id,))]
+        result["assertions"] = [dict(item) for item in self.db.execute("""SELECT a.id,a.predicate,a.quote,a.confidence,
+            a.chunk_id,s.name AS subject,o.name AS object FROM assertions a
+            JOIN chunks c ON c.id=a.chunk_id JOIN entities s ON s.id=a.subject_id
+            JOIN entities o ON o.id=a.object_id WHERE c.document_id=? ORDER BY c.ordinal,a.id""",
+            (document_id,))]
+        return result
+
+    def graph(self, query="", limit=150):
+        limit = max(1, min(int(limit), 300))
+        query = query.strip()
+        if query:
+            pattern = f"%{query}%"
+            rows = self.db.execute("""SELECT a.id,a.subject_id,a.object_id,a.predicate,a.quote,a.confidence,
+                a.chunk_id,d.id AS document_id,d.title AS document_title
+                FROM assertions a JOIN chunks c ON c.id=a.chunk_id JOIN documents d ON d.id=c.document_id
+                JOIN entities s ON s.id=a.subject_id JOIN entities o ON o.id=a.object_id
+                WHERE a.status='accepted' AND (s.name LIKE ? OR o.name LIKE ? OR a.predicate LIKE ?)
+                ORDER BY a.id LIMIT ?""", (pattern, pattern, pattern, limit + 1)).fetchall()
+        else:
+            rows = self.db.execute("""SELECT a.id,a.subject_id,a.object_id,a.predicate,a.quote,a.confidence,
+                a.chunk_id,d.id AS document_id,d.title AS document_title
+                FROM assertions a JOIN chunks c ON c.id=a.chunk_id JOIN documents d ON d.id=c.document_id
+                WHERE a.status='accepted' ORDER BY a.id LIMIT ?""", (limit + 1,)).fetchall()
+        truncated = len(rows) > limit
+        edges = [dict(row) for row in rows[:limit]]
+        ids = {entity_id for edge in edges for entity_id in (edge["subject_id"], edge["object_id"])}
+        if not query:
+            # Include isolated entities when the graph fits the page's size budget.
+            ids.update(row["id"] for row in self.db.execute("SELECT id FROM entities ORDER BY name LIMIT 300"))
+        elif not edges:
+            ids.update(row["id"] for row in self.db.execute(
+                "SELECT id FROM entities WHERE name LIKE ? ORDER BY name LIMIT 100", (f"%{query}%",)))
+        nodes = [dict(row) for row in self.db.execute("SELECT id,name,type FROM entities") if row["id"] in ids]
+        nodes.sort(key=lambda item: (item["type"], item["name"]))
+        return {"nodes": nodes, "edges": edges, "truncated": truncated, "limit": limit}
