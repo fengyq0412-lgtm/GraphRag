@@ -1,0 +1,31 @@
+[
+  {
+    "title": "星图项目职责",
+    "text": "星图项目的测试负责人是李明。星图项目由平台团队维护。",
+    "facts": [
+      {"subject": "星图项目", "subject_type": "project", "predicate": "测试负责人", "object": "李明", "object_type": "person", "quote": "星图项目的测试负责人是李明。"},
+      {"subject": "星图项目", "subject_type": "project", "predicate": "维护团队", "object": "平台团队", "object_type": "team", "quote": "星图项目由平台团队维护。"}
+    ]
+  },
+  {
+    "title": "李明团队信息",
+    "text": "李明属于质量保障团队。质量保障团队负责自动化测试。",
+    "facts": [
+      {"subject": "李明", "subject_type": "person", "predicate": "所属团队", "object": "质量保障团队", "object_type": "team", "quote": "李明属于质量保障团队。"},
+      {"subject": "质量保障团队", "subject_type": "team", "predicate": "职责", "object": "自动化测试", "object_type": "activity", "quote": "质量保障团队负责自动化测试。"}
+    ]
+  },
+  {
+    "title": "平台团队职责",
+    "text": "平台团队负责部署服务。部署服务依赖发布流水线。",
+    "facts": [
+      {"subject": "平台团队", "subject_type": "team", "predicate": "职责", "object": "部署服务", "object_type": "activity", "quote": "平台团队负责部署服务。"},
+      {"subject": "部署服务", "subject_type": "activity", "predicate": "依赖", "object": "发布流水线", "object_type": "system", "quote": "部署服务依赖发布流水线。"}
+    ]
+  },
+  {
+    "title": "发布流程说明",
+    "text": "发布流水线在代码合并后自动运行。流水线首先构建镜像，然后执行安全扫描。",
+    "facts": []
+  }
+]

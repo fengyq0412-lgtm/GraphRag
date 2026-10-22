@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GraphRAG Lite</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header><div><span class="brand">◈ GraphRAG Lite</span><span class="sub">有证据的图谱问答</span></div><span id="stats"></span></header>
+  <main>
+    <section class="hero"><p class="eyebrow">RETRIEVAL WORKBENCH</p><h1>从文本到关系，<br><em>每一步都可追溯。</em></h1><p>观察路由选择、多跳路径、融合检索、重排和最终引用。</p></section>
+    <section class="panel ask-panel"><form id="askForm"><label for="question">提出问题</label><div class="query-row"><input id="question" placeholder="例如：星图项目的测试负责人属于哪个团队？" required><button>查询 ↗</button></div><div class="controls"><label>路由 <select id="mode"><option value="auto">自动选择</option><option value="lexical">文本检索</option><option value="graph">图谱检索</option><option value="hybrid">融合检索</option></select></label><label>最大跳数 <select id="hops"><option>1</option><option>2</option><option selected>3</option></select></label></div></form></section>
+    <div id="error" role="alert"></div>
+    <section id="results" hidden><div class="section-heading"><h2>查询轨迹</h2><span id="method"></span></div><div class="trace"><div class="trace-item"><small>01 / ROUTE</small><strong id="route"></strong><p id="reason"></p></div><div class="trace-item"><small>02 / ENTITIES</small><strong id="entities"></strong><p id="hopIndicator"></p></div><div class="trace-item"><small>03 / RANKING</small><strong>RRF → 重排</strong><p>文本与图谱结果按名次融合，再按相关性重排。</p></div></div><div class="two-col"><section class="panel"><div class="panel-head"><h2>回答</h2><span>ANSWER</span></div><div id="answer"></div><h3>引用证据</h3><div id="sources"></div></section><section class="panel"><div class="panel-head"><h2>关系路径</h2><span>MULTI-HOP</span></div><div id="paths"></div></section></div></section>
+    <section class="panel ingest"><div class="panel-head"><h2>导入文档</h2><span>INGEST</span></div><p>输入标题和正文。配置模型后可自动抽取关系；离线时可粘贴 JSON 断言，必须包含原文 quote。</p><form id="ingestForm"><input id="title" placeholder="文档标题" required><textarea id="text" rows="6" placeholder="文档正文" required></textarea><textarea id="facts" rows="5" placeholder='可选：[{"subject":"星图项目","predicate":"测试负责人","object":"李明","quote":"星图项目的测试负责人是李明。"}]'></textarea><button>抽取并入库 ↗</button></form><pre id="ingestResult"></pre></section>
+    <section class="panel resolutions"><div class="panel-head"><h2>实体消歧</h2><span>HUMAN REVIEW</span></div><div id="resolutions">暂无待处理项</div></section>
+  </main><footer>GraphRAG Lite · SQLite-backed evidence graph</footer><script src="/app.js"></script>
+</body>
+</html>

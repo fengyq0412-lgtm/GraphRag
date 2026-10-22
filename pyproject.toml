@@ -1,0 +1,15 @@
+[project]
+name = "graphrag-lite"
+version = "0.1.0"
+description = "Evidence-first GraphRAG with SQLite, hybrid retrieval and evaluation"
+requires-python = ">=3.11"
+
+[project.scripts]
+graphrag-lite = "graphrag_lite.cli:main"
+
+[tool.setuptools.package-data]
+graphrag_lite = ["static/*"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
