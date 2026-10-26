@@ -426,6 +426,18 @@ class Store:
             (document_id,))]
         return result
 
+    def searchable_chunk_text(self, chunk_id, body):
+        """Hide replaced claims from retrieval while retaining immutable source snapshots."""
+        rows = self.db.execute("SELECT quote,status FROM assertions WHERE chunk_id=?", (chunk_id,)).fetchall()
+        replaced = {row["quote"] for row in rows if row["status"] == "superseded"}
+        current = {row["quote"] for row in rows if row["status"] in ("accepted", "contested")}
+        if replaced & current:
+            # Shared evidence cannot be redacted without risking a partial, misleading quote.
+            return ""
+        for quote in sorted(replaced, key=len, reverse=True):
+            body = body.replace(quote, "")
+        return body.strip()
+
     def graph(self, query="", limit=150):
         limit = max(1, min(int(limit), 300))
         query = query.strip()

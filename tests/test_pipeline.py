@@ -128,6 +128,23 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result["resolution"], "no_longer_conflicting")
         self.assertEqual(self.store.list_documents()["total"], 2)
 
+    def test_replaced_relation_is_hidden_from_text_answer(self):
+        self.store.ingest("项目职责", "星图项目的测试负责人是李明。星图项目由平台团队维护。", [
+            {"subject":"星图项目","subject_type":"project","predicate":"测试负责人",
+             "object":"李明","object_type":"person","quote":"星图项目的测试负责人是李明。"},
+            {"subject":"星图项目","subject_type":"project","predicate":"维护团队",
+             "object":"平台团队","object_type":"team","quote":"星图项目由平台团队维护。"}])
+        proposal = self.store.ingest("负责人变更", "星图项目的测试负责人是王芳。", [
+            {"subject":"星图项目","subject_type":"project","predicate":"测试负责人",
+             "object":"王芳","object_type":"person","quote":"星图项目的测试负责人是王芳。"}])
+        self.store.resolve_version(proposal["series_id"], 1, "replace")
+        result = answer(self.store, "星图项目的测试负责人是谁？")
+        self.assertNotIn("星图项目的测试负责人是李明。", result["answer"])
+        self.assertTrue(all("星图项目的测试负责人是李明。" not in source["text"]
+                            for source in result["sources"]))
+        self.assertIn("王芳", result["answer"])
+        self.assertIn("星图项目由平台团队维护。", " ".join(source["text"] for source in result["sources"]))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
 [
-  {"id":"single-hop","question":"星图项目的测试负责人是谁？","route":"hybrid","source_titles":["星图项目职责"],"min_hops":1},
-  {"id":"multi-hop","question":"星图项目的测试负责人属于哪个团队？请给出关系路径。","route":"hybrid","source_titles":["星图项目职责","李明团队信息"],"min_hops":2},
+  {"id":"single-hop","question":"星图项目的测试负责人是谁？","route":"hybrid","source_assertion_chain":[{"subject":"星图项目","predicate":"测试负责人"}],"min_hops":1},
+  {"id":"multi-hop","question":"星图项目的测试负责人属于哪个团队？请给出关系路径。","route":"hybrid","source_assertion_chain":[{"subject":"星图项目","predicate":"测试负责人"},{"predicate":"所属团队"}],"min_hops":2},
   {"id":"three-hop","question":"星图项目通过平台团队的部署服务依赖哪个系统？","route":"hybrid","source_titles":["星图项目职责","平台团队职责"],"min_hops":3},
   {"id":"text-only","question":"代码合并后流水线首先做什么？","route":"lexical","source_titles":["发布流程说明"]},
   {"id":"architecture","question":"GraphRAG 引擎包含哪些组件？","route":"hybrid","source_titles":["星图系统架构"],"min_hops":1},

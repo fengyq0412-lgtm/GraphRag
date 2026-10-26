@@ -63,7 +63,10 @@ def lexical(store, question, limit=20):
         JOIN document_versions v ON v.document_id=d.id AND v.status='active'""").fetchall()
     scored = []
     for row in rows:
-        score = overlap(question, row["body"] + " " + row["title"])
+        visible = store.searchable_chunk_text(row["id"], row["body"])
+        if not visible:
+            continue
+        score = overlap(question, visible + " " + row["title"])
         if score:
             scored.append((row["id"], score))
     # FTS5 adds an English word match signal; bigram overlap handles Chinese.
@@ -79,7 +82,9 @@ def lexical(store, question, limit=20):
                 fts_score = {row["id"]: 1 / (1 + i) for i, row in enumerate(fts_rows)}
                 merged = dict(scored)
                 for key, value in fts_score.items():
-                    merged[key] = merged.get(key, 0) + value
+                    row = store.db.execute("SELECT body FROM chunks WHERE id=?", (key,)).fetchone()
+                    if row and store.searchable_chunk_text(key, row["body"]):
+                        merged[key] = merged.get(key, 0) + value
                 scored = list(merged.items())
             except Exception:
                 pass
@@ -151,12 +156,15 @@ def retrieve(store, question, mode="auto", max_hops=3, limit=6):
         row = store.db.execute("""SELECT c.id,c.body,d.title FROM chunks c
             JOIN documents d ON d.id=c.document_id WHERE c.id=?""", (chunk_id,)).fetchone()
         if row:
+            visible = store.searchable_chunk_text(chunk_id, row["body"])
+            if not visible:
+                continue
             # Transparent local reranker: query coverage, fusion rank and graph support.
-            coverage = overlap(question, row["body"] + " " + row["title"])
+            coverage = overlap(question, visible + " " + row["title"])
             rerank = 0.65 * coverage + 0.25 * min(1, 60 * rrf) + 0.1 * int("graph" in ranks[chunk_id])
             contested = bool(store.db.execute("SELECT 1 FROM assertions WHERE chunk_id=? AND status='contested' LIMIT 1",
                                               (chunk_id,)).fetchone())
-            candidates.append({"id": chunk_id, "title": row["title"], "text": row["body"],
+            candidates.append({"id": chunk_id, "title": row["title"], "text": visible,
                                "rrf": round(rrf, 6), "rerank": round(rerank, 4),
                                "ranks": ranks[chunk_id], "contested": contested})
     candidates.sort(key=lambda item: (-item["rerank"], item["id"]))

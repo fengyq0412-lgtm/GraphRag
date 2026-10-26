@@ -44,6 +44,9 @@ showDocument=async function(id){
     const doc=await api('/api/documents/'+encodeURIComponent(id));
     if(!doc.series_id)return;
     const box=$('documentDetail');
+    const replaced=doc.assertions.filter(f=>f.status==='superseded');
+    if(replaced.length)box.insertBefore(elt('p',`此快照中有 ${replaced.length} 条关系已被新版证据替换；对应原文句子仅供审计，不参与当前检索与回答。其他有效内容仍可检索。`,'superseded-note'),box.querySelector('h4'));
+    box.querySelectorAll('.document-fact').forEach((row,index)=>{if(doc.assertions[index].status==='superseded'){row.classList.add('superseded-fact');row.append(elt('small','状态：已替换，不参与当前检索'))}});
     box.insertBefore(elt('p',`版本 v${doc.version} · ${versionLabel(doc.status)}`,'version-badge'),box.querySelector('h4'));
     if(doc.status==='active'){
       const edit=elt('button','以此版本编辑 ↗','small-button');
