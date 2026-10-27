@@ -114,3 +114,25 @@ async function loadConflicts(){
   }
 }
 loadConflicts().catch(error=>$('error').textContent=error.message);
+
+const sectionLinks=[...document.querySelectorAll('#sectionNav a[data-section]')];
+function updateSectionNav(){
+  const threshold=window.scrollY+(window.innerWidth<=900?110:80);
+  let active=sectionLinks[0]?.dataset.section;
+  for(const link of sectionLinks){
+    const section=$(link.dataset.section);
+    if(section&&section.getBoundingClientRect().top+window.scrollY<=threshold)active=link.dataset.section;
+  }
+  for(const link of sectionLinks){
+    if(link.dataset.section===active)link.setAttribute('aria-current','location');
+    else link.removeAttribute('aria-current');
+  }
+}
+let sectionNavFrame=0;
+window.addEventListener('scroll',()=>{
+  if(sectionNavFrame)return;
+  sectionNavFrame=requestAnimationFrame(()=>{sectionNavFrame=0;updateSectionNav()});
+},{passive:true});
+window.addEventListener('resize',updateSectionNav);
+window.addEventListener('hashchange',updateSectionNav);
+updateSectionNav();
