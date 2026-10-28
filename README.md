@@ -30,13 +30,13 @@ python -m graphrag_lite.cli eval
 
 导入 JSON：`python -m graphrag_lite.cli ingest document.json`。文件包含 `title`、`text`，以及可选的 `facts`。每条 fact 至少有 `subject`、`predicate`、`object`、`quote`；可加 `subject_type`、`object_type`、`confidence`。`quote` 必须是对应文本块内的连续原文，否则拒绝该断言。详见 `evals/corpus.json`。
 
-未传 `facts` 时，关系抽取调用 OpenAI 兼容 Chat Completions API：
+未传 `facts` 时，关系抽取调用 OpenAI 兼容 Chat Completions API。复制项目根目录的配置示例，并填写实际模型信息：
 
 ```bash
-export LLM_API_KEY='...'
-export LLM_MODEL='...'
-export LLM_BASE_URL='https://api.openai.com/v1' # 可省略
+cp .env.example .env
 ```
+
+在 `.env` 中填写 `LLM_API_KEY` 和 `LLM_MODEL`；使用其他兼容服务时修改 `LLM_BASE_URL`。启动命令和页面新增文档都会读取该文件，无需再执行 `export`。`.env` 已被 Git 忽略，不要把真实密钥写入 `.env.example`。若同时设置了系统环境变量，以系统环境变量为准。`GRAPHRAG_DB` 也可写入 `.env`。
 
 配置模型后，回答会尝试用证据生成自然语言；未配置时返回带引用的原文摘录。模型输出的引用 ID 会校验是否属于本次检索证据，校验失败则退回原文摘录。模型抽取结果同样经过 quote 定位校验。不要将它当作强事实蕴含验证：**引文存在不代表回答必然被引文支持**。
 

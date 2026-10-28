@@ -2,12 +2,15 @@ import json
 import os
 import urllib.request
 
+from .config import load_env
+
 
 class ModelError(RuntimeError):
     pass
 
 
 def available():
+    load_env()
     return bool(os.getenv("LLM_API_KEY") and os.getenv("LLM_MODEL"))
 
 

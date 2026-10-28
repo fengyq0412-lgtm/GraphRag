@@ -22,7 +22,7 @@ def overlap(query, text):
 
 def extract(text):
     if not model.available():
-        raise model.ModelError("Plain text extraction requires LLM_API_KEY and LLM_MODEL; supply facts for offline ingestion")
+        raise model.ModelError("自动抽取需要在项目根目录 .env 中设置 LLM_API_KEY 和 LLM_MODEL；离线入库请提供 facts")
     system = """Extract only explicitly stated binary facts. Return JSON object {"facts": [...]}.
 Each fact has subject, subject_type, predicate, object, object_type, quote, confidence.
 quote MUST be an exact contiguous substring of the supplied text that supports the entire fact.

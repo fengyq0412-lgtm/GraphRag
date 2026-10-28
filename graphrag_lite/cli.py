@@ -3,12 +3,14 @@ import json
 import os
 from pathlib import Path
 
+from .config import load_env
 from .pipeline import answer, extract
 from .server import serve
 from .store import Store
 
 
 def main():
+    load_env()
     parser = argparse.ArgumentParser(description="Evidence-first GraphRAG Lite")
     parser.add_argument("--db", default=os.getenv("GRAPHRAG_DB", "data/graphrag.sqlite"))
     sub = parser.add_subparsers(dest="command", required=True)
