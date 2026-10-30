@@ -36,7 +36,7 @@ python -m graphrag_lite.cli eval
 cp .env.example .env
 ```
 
-在 `.env` 中填写 `LLM_API_KEY` 和 `LLM_MODEL`；使用其他兼容服务时修改 `LLM_BASE_URL`。启动命令和页面新增文档都会读取该文件，无需再执行 `export`。`.env` 已被 Git 忽略，不要把真实密钥写入 `.env.example`。若同时设置了系统环境变量，以系统环境变量为准。`GRAPHRAG_DB` 也可写入 `.env`。
+在 `.env` 中填写 `LLM_API_KEY` 和 `LLM_MODEL`；使用其他兼容服务时修改 `LLM_BASE_URL`。启动命令和页面新增文档都会读取该文件，无需再执行 `export`。`.env` 已被 Git 忽略，不要把真实密钥写入 `.env.example`。若同时设置了系统环境变量，以系统环境变量为准。`GRAPHRAG_DB` 也可写入 `.env`。模型响应较慢时可设置 `LLM_TIMEOUT=180`（默认 180 秒，允许 5–600 秒）。若服务支持 `enable_thinking` 参数，可设置 `LLM_ENABLE_THINKING=false` 缩短简单关系抽取的等待时间；不支持该参数的服务请留空。
 
 配置模型后，回答会尝试用证据生成自然语言；未配置时返回带引用的原文摘录。模型输出的引用 ID 会校验是否属于本次检索证据，校验失败则退回原文摘录。模型抽取结果同样经过 quote 定位校验。不要将它当作强事实蕴含验证：**引文存在不代表回答必然被引文支持**。
 

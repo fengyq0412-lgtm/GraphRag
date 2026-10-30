@@ -19,6 +19,12 @@ def chat(system, user, *, json_mode=False, temperature=0):
     if not available():
         raise ModelError("Set LLM_API_KEY and LLM_MODEL to enable model calls")
     base = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+    try:
+        timeout = int(os.getenv("LLM_TIMEOUT", "180"))
+    except ValueError as exc:
+        raise ModelError("LLM_TIMEOUT 必须是 5 到 600 之间的整数秒数") from exc
+    if not 5 <= timeout <= 600:
+        raise ModelError("LLM_TIMEOUT 必须是 5 到 600 之间的整数秒数")
     payload = {
         "model": os.environ["LLM_MODEL"],
         "temperature": temperature,
@@ -26,14 +32,21 @@ def chat(system, user, *, json_mode=False, temperature=0):
     }
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
+    thinking = os.getenv("LLM_ENABLE_THINKING", "").strip().lower()
+    if thinking:
+        if thinking not in ("true", "false"):
+            raise ModelError("LLM_ENABLE_THINKING 必须为 true 或 false")
+        payload["enable_thinking"] = thinking == "true"
     request = urllib.request.Request(
         base + "/chat/completions",
         data=json.dumps(payload, ensure_ascii=False).encode(),
         headers={"Authorization": "Bearer " + os.environ["LLM_API_KEY"], "Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             data = json.load(response)
         return data["choices"][0]["message"]["content"]
+    except TimeoutError as exc:
+        raise ModelError(f"模型服务等待超过 {timeout} 秒。可在 .env 中调整 LLM_TIMEOUT，或关闭模型思考模式。") from exc
     except Exception as exc:
         raise ModelError(str(exc)) from exc

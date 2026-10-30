@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
-ENV_KEYS = {"LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "GRAPHRAG_DB"}
+ENV_KEYS = {"LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "LLM_TIMEOUT", "LLM_ENABLE_THINKING", "GRAPHRAG_DB"}
 
 
 def load_env(path=ENV_FILE):
