@@ -37,6 +37,17 @@ Promise.all([loadGraph(),loadDocuments()]).catch(e=>$('error').textContent=e.mes
 
 let editSeriesId=null,editBaseVersion=null;
 function versionLabel(status){return {active:'生效',superseded:'历史',pending:'待审核',rejected:'已驳回',accepted:'已采纳',contested:'有争议'}[status]||status}
+function syncUpdateExtractMode(){$('updateFacts').disabled=$('updateAutoExtract').checked}
+$('updateAutoExtract').addEventListener('change',syncUpdateExtractMode);
+function validateUpdateQuotes(body,facts){
+  if(!Array.isArray(facts))throw Error('新版断言必须是 JSON 数组。');
+  const missing=facts.map((fact,index)=>({fact,index})).filter(({fact})=>
+    !fact||typeof fact.quote!=='string'||!fact.quote.trim()||!body.includes(fact.quote.trim()));
+  if(missing.length){
+    const detail=missing.slice(0,3).map(({fact,index})=>`第 ${index+1} 条「${fact?.quote||'缺少 quote'}」`).join('、');
+    throw Error(`${detail}未在新版正文中找到。请同步修改或删除这些断言，或勾选“从新版正文重新抽取关系”。`);
+  }
+}
 const showDocumentBase=showDocument;
 showDocument=async function(id){
   await showDocumentBase(id);
@@ -56,6 +67,7 @@ showDocument=async function(id){
         $('updateTarget').textContent=`正在编辑「${doc.title}」v${doc.version}；提交时将校验版本，避免覆盖别人的更新。`;
         $('updateTitle').value=doc.title;$('updateText').value=doc.body;
         $('updateFacts').value=JSON.stringify(doc.assertions.map(f=>({subject:f.subject,subject_type:f.subject_type,predicate:f.predicate,object:f.object,object_type:f.object_type,quote:f.quote,confidence:f.confidence})),null,2);
+        $('updateAutoExtract').checked=false;syncUpdateExtractMode();
         $('updateNote').value='';$('updatePanel').scrollIntoView({behavior:'smooth'});
       };
       box.insertBefore(edit,box.querySelector('h4'));
@@ -78,14 +90,17 @@ $('updateForm').onsubmit=async event=>{
   if(!editSeriesId){output.textContent='请先从文档库打开当前版本，并点击“以此版本编辑”。';return}
   try{
     const data={base_version:editBaseVersion,title:$('updateTitle').value,text:$('updateText').value,note:$('updateNote').value};
-    if($('updateFacts').value.trim())data.facts=JSON.parse($('updateFacts').value);
+    if(!$('updateAutoExtract').checked&&$('updateFacts').value.trim()){
+      data.facts=JSON.parse($('updateFacts').value);
+      validateUpdateQuotes(data.text,data.facts);
+    }
     const result=await api(`/api/series/${encodeURIComponent(editSeriesId)}/versions`,data);
     output.textContent=`已创建 v${result.version}，状态：${versionLabel(result.status)}。${result.status==='pending'?'请在冲突审核区处理。':''}`;
     await Promise.all([refresh(),loadGraph(),loadDocuments(),loadConflicts()]);
     await showDocument(result.document_id);
     if(result.status==='pending')$('conflictPanel').scrollIntoView({behavior:'smooth'});
     else{editSeriesId=null;editBaseVersion=null;$('updateTarget').textContent=`已提交 v${result.version}。如需继续编辑，请重新打开当前版本。`}
-  }catch(error){output.textContent=error.message+'。请重新打开当前版本核对变更后再提交。'}
+  }catch(error){output.textContent=error.message}
 };
 
 async function loadConflicts(){

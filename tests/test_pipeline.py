@@ -159,6 +159,16 @@ class PipelineTests(unittest.TestCase):
                              for edge in self.store.graph()["edges"]))
         self.assertEqual(self.store.pending_versions()[0]["conflicts"][0]["predicate"], "测试负责人")
 
+    def test_update_rejects_quote_left_over_from_old_body(self):
+        old = self.store.ingest("职责", "星图项目的测试负责人是李明。", [
+            {"subject": "星图项目", "predicate": "测试负责人", "object": "李明",
+             "quote": "星图项目的测试负责人是李明。"}])
+        with self.assertRaisesRegex(ValueError, "引文.*不在当前版本"):
+            self.store.update_document(old["series_id"], 1, "职责", "星图项目的测试负责人是王芳。", [
+                {"subject": "星图项目", "predicate": "测试负责人", "object": "李明",
+                 "quote": "星图项目的测试负责人是李明。"}])
+        self.assertEqual(len(self.store.versions(old["series_id"])), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -188,7 +188,7 @@ class Store:
                     raise ValueError("empty fact field")
                 match = next((i for i, part in enumerate(parts) if quote in part), None)
                 if match is None:
-                    raise ValueError("quote is not an exact substring of a chunk")
+                    raise ValueError(f"引文「{quote[:80]}」不在当前版本的任一文本块中；请修改或删除该断言")
                 confidence = float(fact.get("confidence", 1))
                 if not 0 <= confidence <= 1:
                     raise ValueError("confidence outside [0,1]")
@@ -236,7 +236,7 @@ class Store:
                         "status": existing["status"], "chunks": len(chunks(body)), "assertions": 0, "rejected": []}
             result = self._insert_snapshot(document_id, title, body, facts)
             if result["rejected"]:
-                raise ValueError("Ingest contains unsupported facts: " + json.dumps(result["rejected"], ensure_ascii=False))
+                raise ValueError("新增文档的断言校验失败：" + json.dumps(result["rejected"], ensure_ascii=False))
             conflicts = self._conflicting_assertions(series_id, document_id)
             status = "pending" if conflicts else "active"
             self.db.execute("INSERT INTO document_series(id,title,current_version) VALUES(?,?,?)",
@@ -270,7 +270,7 @@ class Store:
             document_id = digest(f"{series_id}:{version}:{title}:{body}")
             result = self._insert_snapshot(document_id, title, body, facts)
             if result["rejected"]:
-                raise ValueError("Update contains unsupported facts: " + json.dumps(result["rejected"], ensure_ascii=False))
+                raise ValueError("新版断言校验失败：" + json.dumps(result["rejected"], ensure_ascii=False))
             conflicts = self._conflicting_assertions(series_id, document_id)
             status = "pending" if conflicts else "active"
             self.db.execute("""INSERT INTO document_versions(series_id,version,document_id,base_version,status,note)
