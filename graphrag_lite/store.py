@@ -15,6 +15,24 @@ def digest(value):
     return hashlib.sha256(value.encode()).hexdigest()[:16]
 
 
+def canonical_fact(fact):
+    """Normalize explicit possessive claims to the direction stated by their quote."""
+    subject = fact["subject"].strip()
+    predicate = fact["predicate"].strip()
+    obj = fact["object"].strip()
+    quote = fact["quote"].strip()
+    subject_type = fact.get("subject_type", "concept")
+    object_type = fact.get("object_type", "concept")
+    match = re.fullmatch(r"\s*(.+?)的([^，。！？!?]{1,20}?)是(.+?)[。.!?！？]?\s*", quote)
+    if match:
+        owner, role, value = (part.strip() for part in match.groups())
+        if norm(subject) == norm(owner) and norm(obj) == norm(value):
+            return owner, role, value, quote, subject_type, object_type
+        if norm(subject) == norm(value) and norm(obj) == norm(owner):
+            return owner, role, value, quote, object_type, subject_type
+    return subject, predicate, obj, quote, subject_type, object_type
+
+
 class VersionConflict(ValueError):
     def __init__(self, current_version):
         self.current_version = current_version
@@ -129,7 +147,7 @@ class Store:
         self.db.close()
 
     def entity(self, name, kind):
-        name, kind = name.strip(), kind.strip() or "concept"
+        name, kind = name.strip(), norm(kind) or "concept"
         normalized = norm(name)
         if not normalized:
             raise ValueError("Entity name is empty")
@@ -165,10 +183,7 @@ class Store:
                             (chunk_id, document_id, ordinal, part))
         for fact in facts:
             try:
-                subject = fact["subject"].strip()
-                predicate = fact["predicate"].strip()
-                obj = fact["object"].strip()
-                quote = fact["quote"].strip()
+                subject, predicate, obj, quote, subject_type, object_type = canonical_fact(fact)
                 if not all((subject, predicate, obj, quote)):
                     raise ValueError("empty fact field")
                 match = next((i for i, part in enumerate(parts) if quote in part), None)
@@ -177,8 +192,8 @@ class Store:
                 confidence = float(fact.get("confidence", 1))
                 if not 0 <= confidence <= 1:
                     raise ValueError("confidence outside [0,1]")
-                sid = self.entity(subject, fact.get("subject_type", "concept"))
-                oid = self.entity(obj, fact.get("object_type", "concept"))
+                sid = self.entity(subject, subject_type)
+                oid = self.entity(obj, object_type)
                 chunk_id = f"{document_id}:{match}"
                 aid = digest("|".join((sid, predicate, oid, chunk_id, quote)))
                 cursor = self.db.execute("""INSERT OR IGNORE INTO assertions
@@ -396,16 +411,16 @@ class Store:
         offset = max(0, int(offset))
         pattern = f"%{query.strip()}%"
         total = self.db.execute("""SELECT count(*) FROM documents d JOIN document_versions v
-            ON v.document_id=d.id AND v.status='active' WHERE d.title LIKE ? OR d.body LIKE ?""",
+            ON v.document_id=d.id AND v.status IN ('active','pending') WHERE d.title LIKE ? OR d.body LIKE ?""",
                                 (pattern, pattern)).fetchone()[0]
         rows = self.db.execute("""SELECT d.id,d.title,d.created_at,substr(d.body,1,180) AS preview,
-            v.series_id,v.version,
+            v.series_id,v.version,v.status,
             count(DISTINCT c.id) AS chunk_count,count(DISTINCT a.id) AS assertion_count
-            FROM documents d JOIN document_versions v ON v.document_id=d.id AND v.status='active'
+            FROM documents d JOIN document_versions v ON v.document_id=d.id AND v.status IN ('active','pending')
             LEFT JOIN chunks c ON c.document_id=d.id
             LEFT JOIN assertions a ON a.chunk_id=c.id
             WHERE d.title LIKE ? OR d.body LIKE ?
-            GROUP BY d.id ORDER BY d.created_at DESC,d.id LIMIT ? OFFSET ?""",
+            GROUP BY d.id ORDER BY v.status='pending' DESC,d.created_at DESC,d.id LIMIT ? OFFSET ?""",
             (pattern, pattern, limit, offset)).fetchall()
         return {"total": total, "items": [dict(row) for row in rows], "limit": limit, "offset": offset}
 

@@ -28,6 +28,8 @@ Each fact has subject, subject_type, predicate, object, object_type, quote, conf
 quote MUST be an exact contiguous substring of the supplied text that supports the entire fact.
 Use short canonical entity names; do not infer unstated facts. Use [] if none.
 Predicates should be concise relation labels. confidence is 0..1."""
+    system += """ For Chinese text, use Chinese predicate labels. Preserve the direction explicitly stated by the quote.
+For example, 星图项目的测试负责人是李明 means subject=星图项目, predicate=测试负责人, object=李明."""
     data = json.loads(model.chat(system, text, json_mode=True))
     if not isinstance(data.get("facts"), list):
         raise ValueError("Extractor did not return facts list")

@@ -7,6 +7,7 @@ header nav{display:flex;gap:20px}header nav a{color:#d3e8e1;text-decoration:none
 .graph-edge.contested{stroke:#d46e4c;stroke-dasharray:5 4;stroke-width:3}
 .superseded-note{background:#fff0e8;border-left:3px solid #d46e4c;padding:10px 12px;font-size:12px;line-height:1.6;color:#92543f}
 .superseded-fact{background:#fff9f5;padding:12px;border-left:3px solid #d46e4c}.superseded-fact strong{text-decoration:line-through;color:#946e61}.superseded-fact small{display:block;margin-top:5px;color:#a75a40}
+.document-row.pending{border-left:3px solid #d46e4c;background:#fff8f3}.document-row.pending small{color:#a75a40}
 
 /* Persistent section navigation keeps the long workbench easy to browse. */
 .app-shell{display:grid;grid-template-columns:210px minmax(0,1fr);gap:28px;max-width:1500px;margin:auto;padding:0 24px}

@@ -110,7 +110,8 @@ class PipelineTests(unittest.TestCase):
         pending = self.store.ingest("提案", "系统由乙维护。", [{"subject":"系统","predicate":"维护者",
             "object":"乙","quote":"系统由乙维护。"}])
         self.assertEqual(pending["status"], "pending")
-        self.assertEqual(self.store.list_documents()["total"], 1)
+        self.assertEqual(self.store.list_documents()["total"], 2)
+        self.assertEqual(self.store.list_documents()["items"][0]["status"], "pending")
         self.assertFalse(any(node["name"] == "乙" for node in self.store.graph()["nodes"]))
         self.store.resolve_version(pending["series_id"], 1, "reject")
         self.assertEqual(self.store.document(pending["document_id"])["status"], "rejected")
@@ -144,6 +145,19 @@ class PipelineTests(unittest.TestCase):
                             for source in result["sources"]))
         self.assertIn("王芳", result["answer"])
         self.assertIn("星图项目由平台团队维护。", " ".join(source["text"] for source in result["sources"]))
+
+    def test_reversed_model_fact_is_canonicalized_and_reviewed(self):
+        self.store.ingest("现任负责人", "星图项目的测试负责人是王芳。", [
+            {"subject": "星图项目", "subject_type": "project", "predicate": "测试负责人",
+             "object": "王芳", "object_type": "person", "quote": "星图项目的测试负责人是王芳。"}])
+        proposal = self.store.ingest("新职责", "星图项目的测试负责人是李明。", [
+            {"subject": "李明", "subject_type": "Person", "predicate": "is_test_lead_of",
+             "object": "星图项目", "object_type": "Project", "quote": "星图项目的测试负责人是李明。"}])
+        self.assertEqual(proposal["status"], "pending")
+        self.assertEqual(proposal["assertions"], 1)
+        self.assertFalse(any(edge["document_id"] == proposal["document_id"]
+                             for edge in self.store.graph()["edges"]))
+        self.assertEqual(self.store.pending_versions()[0]["conflicts"][0]["predicate"], "测试负责人")
 
 
 if __name__ == "__main__":
