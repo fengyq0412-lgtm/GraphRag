@@ -1,10 +1,11 @@
 const $ = id => document.getElementById(id);
 function elt(tag, text, cls) { const n=document.createElement(tag); if(text!==undefined)n.textContent=text; if(cls)n.className=cls; return n; }
+function showNotice(message){$('notice').textContent=message}
 async function api(path, data) { const r=await fetch(path,{method:data?'POST':'GET',headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined}); const out=await r.json(); if(!r.ok)throw Error(out.error||'Request failed'); return out; }
-async function refresh() { const s=await api('/api/stats'); $('stats').textContent=`${s.documents} 生效文档 · ${s.pending_versions} 待审核 · ${s.entities} 实体 · ${s.assertions} 断言`; const rows=await api('/api/resolutions'); const box=$('resolutions'); box.replaceChildren(); if(!rows.length)box.textContent='暂无待处理项'; rows.forEach(row=>{const div=elt('div',undefined,'resolution');div.append(elt('strong',`${row.surface} ↔ ${row.candidate_name}`),elt('p',`类型 ${row.type} · 相似度 ${row.similarity.toFixed(2)}`)); for(const [action,label,cls] of [['merge','合并',''],['distinct','保留为不同实体','secondary']]){const b=elt('button',label,cls);b.onclick=async()=>{await api('/api/resolve',{id:row.id,action});await refresh()};div.append(b)}box.append(div)}); }
-function render(result){$('results').hidden=false;$('route').textContent={lexical:'文本检索',graph:'图谱检索',hybrid:'融合检索'}[result.route];$('reason').textContent=result.route_reason;$('entities').textContent=result.entities.join('、')||'未命中';$('hopIndicator').textContent=result.multi_hop?'检测到多跳意图':'常规查询';$('method').textContent=result.answer_method.toUpperCase();const answerBox=elt('div',undefined,'answer-text');const re=/\[([a-f0-9]{16}:\d+)\]/g;let start=0,match;while((match=re.exec(result.answer))){answerBox.append(document.createTextNode(result.answer.slice(start,match.index)));const link=elt('a',match[0]);link.href='#source-'+match[1];answerBox.append(link);start=re.lastIndex}answerBox.append(document.createTextNode(result.answer.slice(start)));$('answer').replaceChildren(answerBox);const sources=$('sources');sources.replaceChildren();result.sources.forEach(s=>{const box=elt('div',undefined,'source');box.id='source-'+s.id;box.append(elt('strong',`${s.title} [${s.id}]`),elt('p',s.text),elt('small',`文本位次 ${s.ranks.text||'—'} · 图谱位次 ${s.ranks.graph||'—'} · RRF ${s.rrf} · 重排 ${s.rerank}`));sources.append(box)});const paths=$('paths');paths.replaceChildren();if(!result.paths.length)paths.textContent='没有可展示的关系路径。';result.paths.forEach(p=>{const box=elt('div',undefined,'path');box.append(elt('div',`${p.hops} 跳 · 分数 ${p.score}`,'path-title'));p.assertions.forEach(a=>{box.append(elt('p',`${a.subject} — ${a.predicate} → ${a.object}`),elt('small',`“${a.quote}” [${a.chunk_id}]`))});paths.append(box)});$('results').scrollIntoView({behavior:'smooth',block:'start'});}
+async function refresh() { const s=await api('/api/stats'); $('stats').textContent=`${s.documents} 生效文档 · ${s.entities} 实体 · ${s.assertions} 断言`; $('navPending').textContent=s.pending_versions;$('navPending').hidden=!s.pending_versions; const rows=await api('/api/resolutions'); const box=$('resolutions'); box.replaceChildren(); if(!rows.length)box.textContent='暂无待处理项'; rows.forEach(row=>{const div=elt('div',undefined,'resolution');div.append(elt('strong',`${row.surface} ↔ ${row.candidate_name}`),elt('p',`类型 ${row.type} · 相似度 ${row.similarity.toFixed(2)}`)); for(const [action,label,cls] of [['merge','合并',''],['distinct','保留为不同实体','secondary']]){const b=elt('button',label,cls);b.onclick=async()=>{await api('/api/resolve',{id:row.id,action});await refresh()};div.append(b)}box.append(div)}); }
+function render(result){$('results').hidden=false;$('route').textContent={lexical:'文本检索',graph:'图谱检索',hybrid:'融合检索'}[result.route];$('reason').textContent=result.route_reason;$('entities').textContent=result.entities.join('、')||'未命中';$('hopIndicator').textContent=result.multi_hop?'检测到多跳意图':'常规查询';$('method').textContent=result.answer_method.toUpperCase();const answerBox=elt('div',undefined,'answer-text');const re=/\[([a-f0-9]{16}:\d+)\]/g;let start=0,match;while((match=re.exec(result.answer))){answerBox.append(document.createTextNode(result.answer.slice(start,match.index)));const link=elt('a',match[0]);link.href='#source-'+match[1];answerBox.append(link);start=re.lastIndex}answerBox.append(document.createTextNode(result.answer.slice(start)));$('answer').replaceChildren(answerBox);const sources=$('sources');sources.replaceChildren();result.sources.forEach(s=>{const box=elt('div',undefined,'source');box.id='source-'+s.id;box.append(elt('strong',`${s.title} [${s.id}]`),elt('p',s.text),elt('small',`文本位次 ${s.ranks.text||'—'} · 图谱位次 ${s.ranks.graph||'—'} · RRF ${s.rrf} · 重排 ${s.rerank}`),viewDocumentButton(s.id.split(':')[0]));sources.append(box)});const paths=$('paths');paths.replaceChildren();if(!result.paths.length)paths.textContent='没有可展示的关系路径。';result.paths.forEach(p=>{const box=elt('div',undefined,'path');box.append(elt('div',`${p.hops} 跳 · 分数 ${p.score}`,'path-title'));p.assertions.forEach(a=>{box.append(elt('p',`${a.subject} — ${a.predicate} → ${a.object}`),elt('small',`“${a.quote}” [${a.chunk_id}]`),viewDocumentButton(a.chunk_id.split(':')[0],'查看证据文档 ↗'))});paths.append(box)});$('results').scrollIntoView({behavior:'smooth',block:'start'});}
 $('askForm').onsubmit=async e=>{e.preventDefault();$('error').textContent='';try{const r=await api('/api/ask',{question:$('question').value,mode:$('mode').value,max_hops:Number($('hops').value)});render(r)}catch(err){$('error').textContent=err.message}};
-$('ingestForm').onsubmit=async e=>{e.preventDefault();$('ingestResult').textContent='处理中…';try{const facts=$('facts').value.trim();const data={title:$('title').value,text:$('text').value};if(facts)data.facts=JSON.parse(facts);const r=await api('/api/ingest',data);$('ingestResult').textContent=JSON.stringify(r,null,2);documentOffset=0;await Promise.all([refresh(),loadGraph(),loadDocuments(),loadConflicts()]);await showDocument(r.document_id);if(r.status==='pending')$('conflictPanel').scrollIntoView({behavior:'smooth'})}catch(err){$('ingestResult').textContent=err.message}};
+$('ingestForm').onsubmit=async e=>{e.preventDefault();$('ingestResult').textContent='处理中…';try{const facts=$('facts').value.trim();const data={title:$('title').value,text:$('text').value};if(facts)data.facts=JSON.parse(facts);const r=await api('/api/ingest',data);$('ingestResult').textContent=JSON.stringify(r,null,2);documentOffset=0;await Promise.all([refresh(),loadGraph(),loadDocuments(),loadConflicts()]);if(r.status==='pending'){showNotice('文档已保存，关系需要冲突审核后才会进入图谱。');navigateView('conflictPanel')}else{showNotice('文档已入库，可在文档库查看正文与关系。');await showDocument(r.document_id)}}catch(err){$('ingestResult').textContent=err.message}};
 refresh().catch(err=>$('error').textContent=err.message);
 
 const svgNS='http://www.w3.org/2000/svg';
@@ -27,7 +28,7 @@ $('graphSearchButton').onclick=()=>loadGraph().catch(e=>$('error').textContent=e
 $('graphSearch').onkeydown=e=>{if(e.key==='Enter')$('graphSearchButton').click()};
 $('graphReset').onclick=()=>{$('graphSearch').value='';$('graphSearchButton').click()};
 
-async function loadDocuments(){const params=new URLSearchParams({q:$('documentSearch').value.trim(),limit:25,offset:documentOffset}),data=await api('/api/documents?'+params);documentTotal=data.total;const list=$('documentList');list.replaceChildren();if(!data.items.length)list.append(elt('p','没有匹配的文档。','empty-state'));for(const doc of data.items){const row=elt('button',undefined,'document-row'+(doc.status==='pending'?' pending':'')+(doc.id===selectedDocument?' selected':''));row.append(elt('strong',doc.title),elt('small',`${doc.status==='pending'?'待审核 · 暂不进入图谱 · ':''}${doc.chunk_count} 分块 · ${doc.assertion_count} 断言 · ${doc.created_at}`),elt('p',doc.preview));row.onclick=()=>showDocument(doc.id);list.append(row)}$('documentCount').textContent=`${data.total} 份文档（含待审核）`;$('documentPage').textContent=data.total?`${data.offset+1}–${Math.min(data.offset+data.limit,data.total)} / ${data.total}`:'0 / 0';$('documentPrev').disabled=documentOffset===0;$('documentNext').disabled=documentOffset+25>=documentTotal}
+async function loadDocuments(){const params=new URLSearchParams({q:$('documentSearch').value.trim(),limit:25,offset:documentOffset}),data=await api('/api/documents?'+params);documentTotal=data.total;const list=$('documentList');list.replaceChildren();if(!data.items.length)list.append(elt('p','没有匹配的文档。','empty-state'));for(const doc of data.items){const row=elt('button',undefined,'document-row'+(doc.status==='pending'?' pending':'')+(doc.id===selectedDocument?' selected':''));row.dataset.documentId=doc.id;row.append(elt('strong',doc.title),elt('small',`${doc.status==='pending'?'待审核 · 暂不进入图谱 · ':''}${doc.chunk_count} 分块 · ${doc.assertion_count} 断言 · ${doc.created_at}`),elt('p',doc.preview));row.onclick=()=>showDocument(doc.id);list.append(row)}$('documentCount').textContent=`${data.total} 份文档（含待审核）`;$('documentPage').textContent=data.total?`${data.offset+1}–${Math.min(data.offset+data.limit,data.total)} / ${data.total}`:'0 / 0';$('documentPrev').disabled=documentOffset===0;$('documentNext').disabled=documentOffset+25>=documentTotal}
 async function showDocument(id){try{const doc=await api('/api/documents/'+encodeURIComponent(id));selectedDocument=id;const box=$('documentDetail');box.replaceChildren(elt('small',`DOCUMENT · ${doc.id}`),elt('h3',doc.title),elt('p',`入库时间：${doc.created_at} · ${doc.chunks.length} 分块 · ${doc.assertions.length} 断言`,'hint'),elt('h4','完整正文'),elt('div',doc.body,'document-body'),elt('h4','抽取的关系'));if(!doc.assertions.length)box.append(elt('p','该文档没有已入库的关系断言。','hint'));for(const fact of doc.assertions){const item=elt('div',undefined,'document-fact');item.append(elt('strong',`${fact.subject} — ${fact.predicate} → ${fact.object}`),elt('p',`“${fact.quote}”`),elt('small',`证据块 ${fact.chunk_id} · 置信度 ${fact.confidence}`));box.append(item)}box.append(elt('h4','文本分块'));for(const chunk of doc.chunks){const item=elt('div',undefined,'document-chunk');item.append(elt('small',`${chunk.id} · 第 ${chunk.ordinal+1} 块`),elt('p',chunk.body));box.append(item)}$('library').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){$('error').textContent=e.message}}
 $('documentSearchButton').onclick=()=>{documentOffset=0;loadDocuments().catch(e=>$('error').textContent=e.message)};
 $('documentSearch').onkeydown=e=>{if(e.key==='Enter')$('documentSearchButton').click()};
@@ -50,7 +51,9 @@ function validateUpdateQuotes(body,facts){
 }
 const showDocumentBase=showDocument;
 showDocument=async function(id){
+  navigateView('library');
   await showDocumentBase(id);
+  $('documentList').querySelectorAll('.document-row').forEach(row=>row.classList.toggle('selected',row.dataset.documentId===id));
   try{
     const doc=await api('/api/documents/'+encodeURIComponent(id));
     if(!doc.series_id)return;
@@ -59,6 +62,13 @@ showDocument=async function(id){
     const replaced=doc.assertions.filter(f=>f.status==='superseded');
     if(replaced.length)box.insertBefore(elt('p',`此快照中有 ${replaced.length} 条关系已被新版证据替换；对应原文句子仅供审计，不参与当前检索与回答。其他有效内容仍可检索。`,'superseded-note'),box.querySelector('h4'));
     box.querySelectorAll('.document-fact').forEach((row,index)=>{if(doc.assertions[index].status==='superseded'){row.classList.add('superseded-fact');row.append(elt('small','状态：已替换，不参与当前检索'))}});
+    box.querySelectorAll('.document-fact').forEach((row,index)=>{
+      const fact=doc.assertions[index];
+      if(fact.status!=='accepted'&&fact.status!=='contested')return;
+      const button=elt('button','在图谱中查看 ↗','small-button secondary');
+      button.onclick=async()=>{$('graphSearch').value=fact.subject;navigateView('explore');await loadGraph()};
+      row.append(button);
+    });
     box.insertBefore(elt('p',`版本 v${doc.version} · ${versionLabel(doc.status)}`,'version-badge'),box.querySelector('h4'));
     if(doc.status==='active'){
       const edit=elt('button','以此版本编辑 ↗','small-button');
@@ -66,9 +76,9 @@ showDocument=async function(id){
         editSeriesId=doc.series_id;editBaseVersion=doc.version;
         $('updateTarget').textContent=`正在编辑「${doc.title}」v${doc.version}；提交时将校验版本，避免覆盖别人的更新。`;
         $('updateTitle').value=doc.title;$('updateText').value=doc.body;
-        $('updateFacts').value=JSON.stringify(doc.assertions.map(f=>({subject:f.subject,subject_type:f.subject_type,predicate:f.predicate,object:f.object,object_type:f.object_type,quote:f.quote,confidence:f.confidence})),null,2);
+        $('updateFacts').value=JSON.stringify(doc.assertions.filter(f=>f.status==='accepted'||f.status==='contested').map(f=>({subject:f.subject,subject_type:f.subject_type,predicate:f.predicate,object:f.object,object_type:f.object_type,quote:f.quote,confidence:f.confidence})),null,2);
         $('updateAutoExtract').checked=false;syncUpdateExtractMode();
-        $('updateNote').value='';$('updatePanel').scrollIntoView({behavior:'smooth'});
+        $('updateNote').value='';navigateView('updatePanel');
       };
       box.insertBefore(edit,box.querySelector('h4'));
     }
@@ -97,9 +107,8 @@ $('updateForm').onsubmit=async event=>{
     const result=await api(`/api/series/${encodeURIComponent(editSeriesId)}/versions`,data);
     output.textContent=`已创建 v${result.version}，状态：${versionLabel(result.status)}。${result.status==='pending'?'请在冲突审核区处理。':''}`;
     await Promise.all([refresh(),loadGraph(),loadDocuments(),loadConflicts()]);
-    await showDocument(result.document_id);
-    if(result.status==='pending')$('conflictPanel').scrollIntoView({behavior:'smooth'});
-    else{editSeriesId=null;editBaseVersion=null;$('updateTarget').textContent=`已提交 v${result.version}。如需继续编辑，请重新打开当前版本。`}
+    if(result.status==='pending'){showNotice(`v${result.version} 已保存，请在冲突审核中决定是否采用。`);navigateView('conflictPanel')}
+    else{showNotice(`v${result.version} 已生效，可在文档库查看。`);await showDocument(result.document_id);editSeriesId=null;editBaseVersion=null;$('updateTarget').textContent=`已提交 v${result.version}。如需继续编辑，请重新打开当前版本。`}
   }catch(error){output.textContent=error.message}
 };
 
@@ -123,32 +132,47 @@ async function loadConflicts(){
       ['reject','驳回新版','保留当前版本，新版本仅留在历史中']
     ]){
       const button=elt('button',label,'small-button'+(action==='reject'?' secondary':''));button.title=description;
-      button.onclick=async()=>{try{const result=await api('/api/conflicts/resolve',{series_id:proposal.series_id,version:proposal.version,action});await Promise.all([refresh(),loadGraph(),loadDocuments(),loadConflicts()]);$('documentDetail').textContent=result.status==='pending'?'冲突证据已变化，请重新审核待处理项。':'审核完成，请从文档库重新选择文档。'}catch(error){$('error').textContent=error.message}};
+      button.onclick=async()=>{try{const result=await api('/api/conflicts/resolve',{series_id:proposal.series_id,version:proposal.version,action});await Promise.all([refresh(),loadGraph(),loadDocuments(),loadConflicts()]);showNotice(result.status==='pending'?'冲突证据已变化，请重新审核。':'审核完成。你可以查看图谱或文档库。')}catch(error){$('error').textContent=error.message}};
       card.append(button);
     }
+    card.append(viewDocumentButton(proposal.document_id,'查看待审核文档 ↗'));
     box.append(card);
   }
 }
 loadConflicts().catch(error=>$('error').textContent=error.message);
 
-const sectionLinks=[...document.querySelectorAll('#sectionNav a[data-section]')];
-function updateSectionNav(){
-  const threshold=window.scrollY+(window.innerWidth<=900?110:80);
-  let active=sectionLinks[0]?.dataset.section;
-  for(const link of sectionLinks){
-    const section=$(link.dataset.section);
-    if(section&&section.getBoundingClientRect().top+window.scrollY<=threshold)active=link.dataset.section;
-  }
-  for(const link of sectionLinks){
-    if(link.dataset.section===active)link.setAttribute('aria-current','location');
+const viewMeta={
+  ask:['问答检索','从问题出发，查看回答、引用证据和关系路径。',[['浏览图谱','explore'],['查看文档','library']]],
+  explore:['知识图谱','搜索实体和关系，点击节点或连线追溯原始文档。',[['查看文档','library'],['提出问题','ask']]],
+  library:['文档库','查看正文、断言与版本历史，并从这里发起版本更新。',[['新增文档','ingest']]],
+  ingest:['新增文档','录入原文，自动或手工抽取关系，然后查看入库结果。',[['查看文档','library']]],
+  updatePanel:['版本更新','从当前文档建立新版本；如有冲突，转到审核工作区。',[['选择文档','library']]],
+  conflictPanel:['冲突审核','比较新旧证据，决定采用、并列保留或驳回。',[['查看文档','library'],['浏览图谱','explore']]],
+  disambiguation:['实体消歧','核对相似实体，决定合并或分别保留。',[['浏览图谱','explore']]]
+};
+let currentView='ask';
+function navigateView(view,updateHash=true){
+  if(!viewMeta[view])return;
+  currentView=view;
+  document.querySelectorAll('[data-view]').forEach(panel=>{panel.hidden=panel.dataset.view!==view});
+  document.querySelectorAll('#sectionNav a[data-section]').forEach(link=>{
+    if(link.dataset.section===view)link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
-  }
+  });
+  const [title,description,actions]=viewMeta[view];
+  $('viewTitle').textContent=title;$('viewDescription').textContent=description;
+  $('viewActions').replaceChildren(...actions.map(([label,target])=>{
+    const link=elt('a',label+' ↗','action-link');link.href='#'+target;return link;
+  }));
+  document.querySelectorAll('.workflow-nav a[data-nav-target]').forEach(link=>{
+    link.classList.toggle('current',link.dataset.navTarget===view);
+  });
+  if(updateHash&&location.hash!=='#'+view)location.hash=view;
+  window.scrollTo({top:0,behavior:'auto'});
 }
-let sectionNavFrame=0;
-window.addEventListener('scroll',()=>{
-  if(sectionNavFrame)return;
-  sectionNavFrame=requestAnimationFrame(()=>{sectionNavFrame=0;updateSectionNav()});
-},{passive:true});
-window.addEventListener('resize',updateSectionNav);
-window.addEventListener('hashchange',updateSectionNav);
-updateSectionNav();
+window.addEventListener('hashchange',()=>{
+  const view=decodeURIComponent(location.hash.slice(1));
+  if(viewMeta[view])navigateView(view,false);
+});
+$('chooseUpdateDocument').onclick=()=>navigateView('library');
+navigateView(viewMeta[location.hash.slice(1)]?location.hash.slice(1):'ask',false);
