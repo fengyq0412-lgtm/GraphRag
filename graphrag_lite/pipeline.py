@@ -4,6 +4,7 @@ import re
 from collections import defaultdict, deque
 
 from . import model
+from .ontology import schema as ontology_schema
 from .store import norm
 
 
@@ -30,6 +31,12 @@ Use short canonical entity names; do not infer unstated facts. Use [] if none.
 Predicates should be concise relation labels. confidence is 0..1."""
     system += """ For Chinese text, use Chinese predicate labels. Preserve the direction explicitly stated by the quote.
 For example, 星图项目的测试负责人是李明 means subject=星图项目, predicate=测试负责人, object=李明."""
+    ontology = ontology_schema()
+    system += " Known entity types: " + ", ".join(ontology["types"]) + "."
+    system += " Known typed relations (predicate: subject types -> object types): " + "; ".join(
+        f"{name}: {'/'.join(rule['subject'])} -> {'/'.join(rule['object'])}"
+        for name, rule in ontology["relations"].items()) + "."
+    system += " Prefer these labels when the text supports them; use concept for an uncertain type and a new predicate when none fits."
     data = json.loads(model.chat(system, text, json_mode=True))
     if not isinstance(data.get("facts"), list):
         raise ValueError("Extractor did not return facts list")

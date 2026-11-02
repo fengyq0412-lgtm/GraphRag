@@ -144,6 +144,7 @@ loadConflicts().catch(error=>$('error').textContent=error.message);
 const viewMeta={
   ask:['问答检索','从问题出发，查看回答、引用证据和关系路径。',[['浏览图谱','explore'],['查看文档','library']]],
   explore:['知识图谱','搜索实体和关系，点击节点或连线追溯原始文档。',[['查看文档','library'],['提出问题','ask']]],
+  ontology:['本体模型','查看实体类型、关系约束与现有图谱的符合情况。',[['浏览图谱','explore'],['新增文档','ingest']]],
   library:['文档库','查看正文、断言与版本历史，并从这里发起版本更新。',[['新增文档','ingest']]],
   ingest:['新增文档','录入原文，自动或手工抽取关系，然后查看入库结果。',[['查看文档','library']]],
   updatePanel:['版本更新','从当前文档建立新版本；如有冲突，转到审核工作区。',[['选择文档','library']]],
@@ -168,7 +169,20 @@ function navigateView(view,updateHash=true){
     link.classList.toggle('current',link.dataset.navTarget===view);
   });
   if(updateHash&&location.hash!=='#'+view)location.hash=view;
+  if(view==='ontology')loadOntology().catch(error=>$('error').textContent=error.message);
   window.scrollTo({top:0,behavior:'auto'});
+}
+async function loadOntology(){
+  const data=await api('/api/ontology');
+  $('ontologyVersion').textContent=`v${data.version} · 开放模式`;
+  const metrics=[['已校验',data.counts.typed],['类型未指定',data.counts.partial],['待建模关系',data.counts.unmapped],['类型不符',data.counts.violations]];
+  $('ontologyStats').replaceChildren(...metrics.map(([label,value])=>{const card=elt('div',undefined,'ontology-stat');card.append(elt('strong',String(value)),elt('small',label));return card}));
+  $('ontologyTypes').replaceChildren(...Object.entries(data.types).map(([key,label])=>{const item=elt('div',undefined,'ontology-type');item.append(elt('strong',label),elt('code',key));return item}));
+  const typeLabel=kind=>data.types[kind]||kind;
+  $('ontologyRelations').replaceChildren(...Object.entries(data.relations).map(([name,rule])=>{const item=elt('div',undefined,'ontology-relation');item.append(elt('strong',name),elt('p',`${rule.subject.map(typeLabel).join(' / ')} → ${rule.object.map(typeLabel).join(' / ')}`),elt('small',rule.description));const button=elt('button','查看图谱 ↗','small-button secondary');button.onclick=async()=>{$('graphSearch').value=name;navigateView('explore');await loadGraph()};item.append(button);return item}));
+  const violations=$('ontologyViolations');violations.replaceChildren(elt('h3',`存量类型问题 · ${data.violations.length}`));
+  if(!data.violations.length)violations.append(elt('p','当前生效断言没有类型冲突。','hint'));
+  for(const issue of data.violations){const item=elt('div',undefined,'ontology-violation');item.append(elt('strong',`${issue.subject} — ${issue.predicate} → ${issue.object}`),elt('p',issue.reason));const button=elt('button','查看来源文档 ↗','small-button secondary');button.onclick=()=>{navigateView('library');showDocument(issue.document_id)};item.append(button);violations.append(item)}
 }
 window.addEventListener('hashchange',()=>{
   const view=decodeURIComponent(location.hash.slice(1));

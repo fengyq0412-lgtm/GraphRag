@@ -28,6 +28,12 @@ python -m graphrag_lite.cli eval
 
 ## 文档导入与模型
 
+### 本体模型
+
+`graphrag_lite/ontology.json` 是随代码版本管理的本体定义，包含 13 类具体实体和 1 类未指定实体、25 种关系，以及每种关系允许的主体和客体类型。页面左侧的**本体模型**可查看定义与当前生效断言的校验统计，并跳到图谱或来源文档；`GET /api/ontology` 返回相同数据及存量类型问题。
+
+新断言在精确引文校验后按本体校验：已定义关系若显式类型不匹配，整个文档提交回滚并提示允许的类型。类型省略时使用 `concept`，允许入库但统计为“类型未指定”；尚未定义的关系也允许入库，统计为“待建模关系”。这样可逐步扩展本体，不会删除或隐藏既有断言。修改 JSON 定义后重启服务即可生效；存量断言只审计、不自动改写，关系的事实冲突仍按“冲突审核”流程处理。
+
 导入 JSON：`python -m graphrag_lite.cli ingest document.json`。文件包含 `title`、`text`，以及可选的 `facts`。每条 fact 至少有 `subject`、`predicate`、`object`、`quote`；可加 `subject_type`、`object_type`、`confidence`。`quote` 必须是对应文本块内的连续原文，否则拒绝该断言。详见 `evals/corpus.json`。
 
 未传 `facts` 时，关系抽取调用 OpenAI 兼容 Chat Completions API。复制项目根目录的配置示例，并填写实际模型信息：

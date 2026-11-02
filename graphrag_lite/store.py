@@ -6,6 +6,8 @@ import unicodedata
 from difflib import SequenceMatcher, unified_diff
 from pathlib import Path
 
+from .ontology import schema as ontology_schema, validate as validate_ontology
+
 
 def norm(value):
     return re.sub(r"\s+", "", unicodedata.normalize("NFKC", value).casefold())
@@ -192,6 +194,9 @@ class Store:
                 confidence = float(fact.get("confidence", 1))
                 if not 0 <= confidence <= 1:
                     raise ValueError("confidence outside [0,1]")
+                subject_type = norm(subject_type) or "concept"
+                object_type = norm(object_type) or "concept"
+                validate_ontology(predicate, subject_type, object_type)
                 sid = self.entity(subject, subject_type)
                 oid = self.entity(obj, object_type)
                 chunk_id = f"{document_id}:{match}"
@@ -405,6 +410,27 @@ class Store:
                 WHERE a.status IN ('accepted','contested')""").fetchone()[0],
             "pending_versions": self.db.execute("SELECT count(*) FROM document_versions WHERE status='pending'").fetchone()[0],
         }
+
+    def ontology(self):
+        """Return the schema and a read-only audit of active assertions."""
+        schema = ontology_schema()
+        rows = self.db.execute("""SELECT a.id,a.predicate,s.name AS subject,s.type AS subject_type,
+            o.name AS object,o.type AS object_type,d.id AS document_id
+            FROM assertions a JOIN entities s ON s.id=a.subject_id
+            JOIN entities o ON o.id=a.object_id JOIN chunks c ON c.id=a.chunk_id
+            JOIN documents d ON d.id=c.document_id
+            JOIN document_versions v ON v.document_id=d.id AND v.status='active'
+            WHERE a.status IN ('accepted','contested') ORDER BY a.predicate,a.id""").fetchall()
+        counts = {"typed": 0, "partial": 0, "unmapped": 0, "violations": 0}
+        violations = []
+        for row in rows:
+            item = dict(row)
+            try:
+                counts[validate_ontology(item["predicate"], item["subject_type"], item["object_type"])] += 1
+            except ValueError as exc:
+                counts["violations"] += 1
+                violations.append({**item, "reason": str(exc)})
+        return {**schema, "counts": counts, "total_assertions": len(rows), "violations": violations}
 
     def list_documents(self, query="", limit=25, offset=0):
         limit = max(1, min(int(limit), 100))

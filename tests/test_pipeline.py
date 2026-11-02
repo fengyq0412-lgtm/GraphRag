@@ -28,6 +28,20 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue(any(path["hops"] >= 2 for path in result["paths"]))
         self.assertTrue(set(result["citations"]) <= {source["id"] for source in result["sources"]})
 
+    def test_ontology_rejects_wrong_typed_relation_and_audits_active_graph(self):
+        valid = self.store.ingest("项目负责人", "星图项目的测试负责人是王芳。", [
+            {"subject": "星图项目", "subject_type": "Project", "predicate": "测试负责人",
+             "object": "王芳", "object_type": "Person", "quote": "星图项目的测试负责人是王芳。"}])
+        self.assertEqual(valid["assertions"], 1)
+        with self.assertRaisesRegex(ValueError, "本体约束.*客体类型"):
+            self.store.ingest("错误类型", "星图项目的测试负责人是平台团队。", [
+                {"subject": "星图项目", "subject_type": "project", "predicate": "测试负责人",
+                 "object": "平台团队", "object_type": "team", "quote": "星图项目的测试负责人是平台团队。"}])
+        self.assertEqual(self.store.stats()["documents"], 1)
+        audit = self.store.ontology()
+        self.assertEqual(audit["counts"], {"typed": 1, "partial": 0, "unmapped": 0, "violations": 0})
+        self.assertEqual(audit["version"], "1.0.0")
+
     def test_ambiguous_entity_requires_review(self):
         self.store.ingest("a", "质量保障团队负责测试。", [{"subject": "质量保障团队", "subject_type": "team", "predicate": "负责", "object": "测试", "quote": "质量保障团队负责测试。"}])
         self.store.ingest("b", "质量保证团队负责验证。", [{"subject": "质量保证团队", "subject_type": "team", "predicate": "负责", "object": "验证", "quote": "质量保证团队负责验证。"}])

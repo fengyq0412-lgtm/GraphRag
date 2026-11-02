@@ -39,6 +39,8 @@ def make_handler(database):
                 try:
                     if path == "/api/stats":
                         self.respond(200, store.stats())
+                    elif path == "/api/ontology":
+                        self.respond(200, store.ontology())
                     elif path == "/api/resolutions":
                         self.respond(200, store.pending())
                     elif path == "/api/graph":
