@@ -28,6 +28,14 @@ class ModelTests(unittest.TestCase):
             with self.assertRaisesRegex(model.ModelError, "超过 30 秒"):
                 model.chat("system", "text")
 
+    def test_verifier_can_use_a_distinct_model(self):
+        settings = {"LLM_API_KEY": "test-key", "LLM_MODEL": "answer-model"}
+        response = io.BytesIO(b'{"choices":[{"message":{"content":"{}"}}]}')
+        with patch.dict(os.environ, settings, clear=True), patch.object(model, "load_env"), \
+                patch.object(model.urllib.request, "urlopen", return_value=response) as open_request:
+            model.chat("verify", "claim", json_mode=True, model_name="verifier-model")
+        self.assertEqual(json.loads(open_request.call_args.args[0].data)["model"], "verifier-model")
+
 
 if __name__ == "__main__":
     unittest.main()

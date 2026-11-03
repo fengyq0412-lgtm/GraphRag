@@ -14,7 +14,7 @@ def available():
     return bool(os.getenv("LLM_API_KEY") and os.getenv("LLM_MODEL"))
 
 
-def chat(system, user, *, json_mode=False, temperature=0):
+def chat(system, user, *, json_mode=False, temperature=0, model_name=None):
     """OpenAI-compatible chat completions; no SDK dependency."""
     if not available():
         raise ModelError("Set LLM_API_KEY and LLM_MODEL to enable model calls")
@@ -26,7 +26,7 @@ def chat(system, user, *, json_mode=False, temperature=0):
     if not 5 <= timeout <= 600:
         raise ModelError("LLM_TIMEOUT 必须是 5 到 600 之间的整数秒数")
     payload = {
-        "model": os.environ["LLM_MODEL"],
+        "model": model_name or os.environ["LLM_MODEL"],
         "temperature": temperature,
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
     }

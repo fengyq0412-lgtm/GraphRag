@@ -1,0 +1,66 @@
+[
+  {
+    "id": "direct-supported",
+    "claim": "星图项目的测试负责人是王芳。",
+    "citations": ["aaaaaaaaaaaaaaaa:0"],
+    "evidence": [{"id": "aaaaaaaaaaaaaaaa:0", "text": "星图项目的测试负责人是王芳。"}],
+    "label": "supported",
+    "rationale": "主体、关系和客体与原文一致。"
+  },
+  {
+    "id": "direct-contradicted",
+    "claim": "星图项目的测试负责人是李明。",
+    "citations": ["aaaaaaaaaaaaaaaa:0"],
+    "evidence": [{"id": "aaaaaaaaaaaaaaaa:0", "text": "星图项目的测试负责人是王芳。"}],
+    "label": "unsupported",
+    "rationale": "引用支持王芳，不支持李明。"
+  },
+  {
+    "id": "multi-hop-supported",
+    "claim": "星图项目的测试负责人属于质量保障团队。",
+    "citations": ["aaaaaaaaaaaaaaaa:0", "bbbbbbbbbbbbbbbb:0"],
+    "evidence": [{"id": "aaaaaaaaaaaaaaaa:0", "text": "星图项目的测试负责人是王芳。"}, {"id": "bbbbbbbbbbbbbbbb:0", "text": "王芳属于质量保障团队。"}],
+    "label": "supported",
+    "rationale": "两条证据共同构成负责人到团队的路径。"
+  },
+  {
+    "id": "multi-hop-missing-link",
+    "claim": "星图项目的测试负责人属于质量保障团队。",
+    "citations": ["aaaaaaaaaaaaaaaa:0"],
+    "evidence": [{"id": "aaaaaaaaaaaaaaaa:0", "text": "星图项目的测试负责人是王芳。"}],
+    "label": "unsupported",
+    "rationale": "缺少王芳所属团队的证据。"
+  },
+  {
+    "id": "unsupported-detail",
+    "claim": "王芳从 2026 年起担任星图项目的测试负责人。",
+    "citations": ["aaaaaaaaaaaaaaaa:0"],
+    "evidence": [{"id": "aaaaaaaaaaaaaaaa:0", "text": "星图项目的测试负责人是王芳。"}],
+    "label": "unsupported",
+    "rationale": "原文没有任职起始年份。"
+  },
+  {
+    "id": "conflict-as-fact",
+    "claim": "星图项目的测试负责人确定是王芳。",
+    "citations": ["aaaaaaaaaaaaaaaa:0", "cccccccccccccccc:0"],
+    "evidence": [{"id": "aaaaaaaaaaaaaaaa:0", "text": "星图项目的测试负责人是王芳。"}, {"id": "cccccccccccccccc:0", "text": "星图项目的测试负责人是李明。"}],
+    "label": "unsupported",
+    "rationale": "两份来源冲突，不能得出确定结论。"
+  },
+  {
+    "id": "conflict-described",
+    "claim": "两份文档对星图项目的测试负责人分别记载为王芳和李明，存在冲突。",
+    "citations": ["aaaaaaaaaaaaaaaa:0", "cccccccccccccccc:0"],
+    "evidence": [{"id": "aaaaaaaaaaaaaaaa:0", "text": "星图项目的测试负责人是王芳。"}, {"id": "cccccccccccccccc:0", "text": "星图项目的测试负责人是李明。"}],
+    "label": "supported",
+    "rationale": "如实呈现两份冲突证据。"
+  },
+  {
+    "id": "unrelated-citation",
+    "claim": "星图项目的测试负责人是王芳。",
+    "citations": ["dddddddddddddddd:0"],
+    "evidence": [{"id": "dddddddddddddddd:0", "text": "发布流水线依赖镜像仓库。"}],
+    "label": "unsupported",
+    "rationale": "引用与断言无关。"
+  }
+]

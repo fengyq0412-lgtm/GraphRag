@@ -22,6 +22,7 @@ def main():
     ask.add_argument("question")
     ask.add_argument("--mode", choices=["auto", "lexical", "graph", "hybrid"], default="auto")
     sub.add_parser("eval")
+    sub.add_parser("eval-grounding")
     args = parser.parse_args()
     if args.command == "serve":
         serve(args.db, port=args.port)
@@ -29,6 +30,10 @@ def main():
     if args.command == "eval":
         from .evaluation import run
         print(json.dumps(run(args.db), ensure_ascii=False, indent=2))
+        return
+    if args.command == "eval-grounding":
+        from .evaluation import run_grounding_review
+        print(json.dumps(run_grounding_review(), ensure_ascii=False, indent=2))
         return
     store = Store(args.db)
     try:
